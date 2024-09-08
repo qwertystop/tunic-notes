@@ -2,6 +2,7 @@
 For finding patterns in text from the game Tunic
 """
 
+import itertools
 import glob
 from collections import defaultdict
 
@@ -14,7 +15,7 @@ HEADER: LITERAL
 line: (word | ("[" LITERAL "]"))+ _NEWLINE
 word: glyph ("/" glyph)*
 LITERAL: /[^]\n]+/
-glyph: ( GLYPH_TOP GLYPH_BOT )
+glyph: ( GLYPH_TOP "-"? GLYPH_BOT )
        | GLYPH_TOP -> top_glyph_only
        | GLYPH_BOT -> bot_glyph_only
 GLYPH_TOP: /[1234QWER]+/
@@ -29,10 +30,75 @@ _NEWLINE: /\n/
 
 # These map all detected glyphs and words to all locations where they have been seen.
 SCANNED_TREES: list[lark.Tree] = []
-FOUND_WORDS: defaultdict[str, list[str]] = defaultdict(list)
+FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_TOP_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_BOT_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
-GLYPH_TRANSLATIONS: dict[str, str] = {}
+GLYPH_TRANSLATIONS: dict[str, str] = {
+    "134-RX/4WRS": "<TAKE, GET>",
+    "234-RXV/WASDFZV": "<ITEM>",
+    "123QWR-DZX": "you",
+    "3WR-SX": "z",
+    "12-": "<A>",
+    "4R-AFX/3-AS/WR-AS": "<FOUND>",
+    "124R-SDFX/WR-AS": "guard",
+    "WRSFX": "f",  # maybe? from library picture
+    "WR-SFX": "how",
+    "123WR-DV": "<OF>",
+    "12WR-ASX": "<THE>",
+    # From "well well well" fox at well
+    "34Q-DFZ": "weh",
+    "WR-X": "ll",
+    "QWR-SDFZ": "beh",
+    "DFZ": "eh",
+    "134QR-ASDFZX/WR-X/WRAS": "<SHIELD/BLOCK>",
+    "34-DFXV": "it",
+    "123QWR-DZX/3WR-SXDF/3WR-SX": "uses",
+    # thus...
+    "DF": "ə",
+    "12": "ah",
+    "WR-AS": "d",
+    "124QR-SDFZX/WR-X/WR-ASDF/3AS": "golden",
+}
+
+
+def mirroring_unify():
+    """
+    Hypothesis under test:
+    Glyph-parts above and below the separator represent the same thing transformed in some way.
+    Test by:
+    unifying into a single representation.
+    Result:
+    No single mapping seems to work;
+    any one pattern unifies very few.
+    """
+        # none of these manual ones worked
+        # so let's try all possiblities
+    possible_tos = list(itertools.permutations("1234QWR"))
+        # for to in
+        # [
+        # # simple vertical
+        # # shift
+        # '1234QWR',
+        # # mirror on the
+        # # center
+        # '3412QWR',
+        # # mirror diamond
+        # # left-right
+        # '2143QWR',
+        # # double mirror
+        # '4321QWR' ]
+    top_glyphs = set(FOUND_TOP_GLYPHS.keys())
+    bot_glyphs = set(FOUND_BOT_GLYPHS.keys())
+    print(f"{len(top_glyphs)} top glyphs.")
+    print(f"{len(bot_glyphs)} bot glyphs.")
+    for to in possible_tos:
+        table = str.maketrans("ASDFZXV", ''.join(to))
+        mapped = set(glyph.translate(table) for glyph in FOUND_BOT_GLYPHS)
+        res = len(top_glyphs | mapped)
+        if res < 100:
+            print(
+                f"{''.join(to)}: {res}."
+            )
 
 
 def glyph_ordering(char):
@@ -98,7 +164,7 @@ class TunicNotes(lark.Visitor):
         for word in tree.children:
             # skip literals
             if isinstance(word, lark.Tree):
-                FOUND_WORDS[word.this_word].append(
+                FOUND_WORDS[word.this_word].add(
                     f"{tree.in_section}, line {tree.line_number}"
                 )
 
@@ -133,7 +199,8 @@ def _main():
         tree = load_file(fname, lrk)
         visitor.visit(tree)
         trees[fname] = tree
-        print(tree.pretty())
+        # print(tree.pretty())
+    mirroring_unify()
     return trees
 
 
