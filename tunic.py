@@ -4,7 +4,6 @@ For finding patterns in text from the game Tunic
 
 import glob
 from collections import defaultdict
-from pprint import pprint
 
 import lark
 
@@ -13,9 +12,13 @@ start: section
 section: "#" HEADER _NEWLINE (section+ | line+)
 HEADER: LITERAL
 line: (word | ("[" LITERAL "]"))+ _NEWLINE
-word: GLYPH ("/" GLYPH)*
+word: glyph ("/" glyph)*
 LITERAL: /[^]\n]+/
-GLYPH: /[1234QWERASDFZXCV]+/
+glyph: ( GLYPH_TOP GLYPH_BOT )
+       | GLYPH_TOP -> top_glyph_only
+       | GLYPH_BOT -> bot_glyph_only
+GLYPH_TOP: /[1234QWER]+/
+GLYPH_BOT: /[ASDFZXCV]+/
 _NEWLINE: /\n/
 
 %import common.WS_INLINE
@@ -26,8 +29,9 @@ _NEWLINE: /\n/
 
 # These map all detected glyphs and words to all locations where they have been seen.
 SCANNED_TREES: list[lark.Tree] = []
-FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
-FOUND_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
+FOUND_WORDS: defaultdict[str, list[str]] = defaultdict(list)
+FOUND_TOP_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
+FOUND_BOT_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 GLYPH_TRANSLATIONS: dict[str, str] = {}
 
 
@@ -50,14 +54,20 @@ def clean_glyph(glyph: str) -> str:
 class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
     """Clean glyphs"""
 
-    def GLYPH(self, token):  # pylint:disable=invalid-name
+    def glyph(self, tree):  # pylint:disable=invalid-name
         """Standardize glyphs by deduplicating and sorting them."""
-        resolved = clean_glyph(token.value)
+        resolved = [clean_glyph(token.value) for token in tree.children]
         return resolved
+
+    def top_glyph_only(self, tree):
+        return [clean_glyph(tree.children[0]), ""]
+
+    def bot_glyph_only(self, tree):
+        return ["", clean_glyph(tree.children[0])]
 
     def word(self, tree):
         """Print representation of whole word"""
-        tree.this_word = "/".join(tree.children)
+        tree.this_word = "/".join(["-".join(glyph) for glyph in tree.children])
         return tree
 
     def section(self, tree):
@@ -80,14 +90,15 @@ class TunicNotes(lark.Visitor):
     def word(self, tree):
         """Log all glyphs from this word in FOUND_GLYPHS"""
         for glyph in tree.children:
-            FOUND_GLYPHS[glyph].add(tree.this_word)
+            FOUND_TOP_GLYPHS[glyph[0]].add(tree.this_word)
+            FOUND_BOT_GLYPHS[glyph[1]].add(tree.this_word)
 
     def line(self, tree):
         """Log all words from this line in FOUND_WORDS"""
         for word in tree.children:
             # skip literals
             if isinstance(word, lark.Tree):
-                FOUND_WORDS[word.this_word].add(
+                FOUND_WORDS[word.this_word].append(
                     f"{tree.in_section}, line {tree.line_number}"
                 )
 
@@ -122,8 +133,7 @@ def _main():
         tree = load_file(fname, lrk)
         visitor.visit(tree)
         trees[fname] = tree
-    pprint(points_of_interest(FOUND_WORDS, 2))
-    pprint(points_of_interest(FOUND_GLYPHS, 2))
+        print(tree.pretty())
     return trees
 
 
