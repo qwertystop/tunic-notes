@@ -198,10 +198,7 @@ def render_text(word: str):
     """Convert dense representation to text art"""
     representation = [""] * 7
     for glyph in word.split("/"):
-        print(glyph)
         for i, new in enumerate(_render_glyph(glyph)):
-            print(i)
-            print(new)
             representation[i] = representation[i] + new
     for line in representation:
         print(line)
@@ -217,7 +214,8 @@ def _render_glyph(glyph: str) -> list[str]:
         "".join([_f("1", "/"), _f("W", "|"), _f("2", "\\")]),
         "".join([_f("3", "\\"), _f("W", "|"), _f("4", "/")]),
         "".join([_f("Q", "|"), _f("R", "|"), " "]),
-        "___" "".join([_f("A", "/"), _f("X", "|"), _f("S", "\\")]),
+        "___",
+        "".join([_f("A", "/"), _f("X", "|"), _f("S", "\\")]),
         "".join([_f("D", "\\"), _f("X", "|"), _f("F", "/")]),
         "".join([_f("Z", "|"), _f("V", "°"), " "]),
     ]
