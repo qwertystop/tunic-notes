@@ -225,15 +225,11 @@ def _render_glyph(glyph: str) -> list[str]:
 def _main():
     lrk = init_lark()
     visitor = TunicNotes()
-    trees = {}
     for fname in glob.iglob("./notes/*.txt"):
         print(fname)
         tree = load_file(fname, lrk)
         visitor.visit(tree)
-        trees[fname] = tree
         # print(tree.pretty())
-    mirroring_unify()
-    return trees
 
 
 if __name__ == "__main__":
