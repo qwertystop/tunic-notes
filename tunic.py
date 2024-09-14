@@ -196,7 +196,7 @@ def points_of_interest(search_space: dict[str, set], n: int):
 
 def render_text(word: str):
     """Convert dense representation to text art"""
-    representation = [""] * 7
+    representation = [""] * 12
     for glyph in word.split("/"):
         for i, new in enumerate(_render_glyph(glyph)):
             representation[i] = representation[i] + new
@@ -205,19 +205,38 @@ def render_text(word: str):
 
 
 def _render_glyph(glyph: str) -> list[str]:
-    # each glyph can be drawn as a 10x5 text cell
-    # or 3x6 for reduced size, let's try that first
+    r"""
+    Each glyph can be drawn as a 12x5 text cell:
+    [ /|\ ]
+    [/ | \]
+    [\ | /]
+    [|\|/ ]
+    [| |  ]
+    [-----]
+    [|    ]
+    [|/|\ ]
+    [/ | \]
+    [\ | /]
+    [ \|/ ]
+    [  °  ]
+    """
+
     def _f(x: str, out: str) -> str:  # pylint:disable=invalid-name
         return out if x in glyph else " "
 
     representation = [
-        "".join([_f("1", "/"), _f("W", "|"), _f("2", "\\")]),
-        "".join([_f("3", "\\"), _f("W", "|"), _f("4", "/")]),
-        "".join([_f("Q", "|"), _f("R", "|"), " "]),
-        "___",
-        "".join([_f("A", "/"), _f("X", "|"), _f("S", "\\")]),
-        "".join([_f("D", "\\"), _f("X", "|"), _f("F", "/")]),
-        "".join([_f("Z", "|"), _f("V", "°"), " "]),
+        "".join([" ", _f("1", "/"), _f("W", "|"), _f("2", "\\"), " "]),
+        "".join([_f("1", "/"), " ", _f("W", "|"), " ", _f("2", "\\")]),
+        "".join([_f("3", "\\"), " ", _f("W", "|"), " ", _f("4", "/")]),
+        "".join([_f("Q", "|"), _f("3", "\\"), _f("W", "|"), _f("4", "/"), " "]),
+        "".join([_f("Q", "|"), " ", _f("R", "|"), " ", " "]),
+        "-----",
+        "".join([_f("Z", "|"), " ", " ", " ", " "]),
+        "".join([_f("Z", "|"), _f("A", "/"), _f("X", "|"), _f("S", "\\"), " "]),
+        "".join([_f("A", "/"), " ", _f("X", "|"), " ", _f("S", "\\")]),
+        "".join([_f("D", "\\"), " ", _f("X", "|"), " ", _f("F", "/")]),
+        "".join([" ", _f("D", "\\"), _f("X", "|"), _f("F", "/"), " "]),
+        "".join([" ", " ", _f("V", "°"), " ", " "]),
     ]
     return representation
 
