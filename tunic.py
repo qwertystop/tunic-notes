@@ -2,8 +2,8 @@
 For finding patterns in text from the game Tunic
 """
 
-import itertools
 import glob
+import itertools
 from collections import defaultdict
 
 import lark
@@ -71,34 +71,32 @@ def mirroring_unify():
     No single mapping seems to work;
     any one pattern unifies very few.
     """
-        # none of these manual ones worked
-        # so let's try all possiblities
+    # none of these manual ones worked
+    # so let's try all possiblities
     possible_tos = list(itertools.permutations("1234QWR"))
-        # for to in
-        # [
-        # # simple vertical
-        # # shift
-        # '1234QWR',
-        # # mirror on the
-        # # center
-        # '3412QWR',
-        # # mirror diamond
-        # # left-right
-        # '2143QWR',
-        # # double mirror
-        # '4321QWR' ]
+    # for to in
+    # [
+    # # simple vertical
+    # # shift
+    # '1234QWR',
+    # # mirror on the
+    # # center
+    # '3412QWR',
+    # # mirror diamond
+    # # left-right
+    # '2143QWR',
+    # # double mirror
+    # '4321QWR' ]
     top_glyphs = set(FOUND_TOP_GLYPHS.keys())
     bot_glyphs = set(FOUND_BOT_GLYPHS.keys())
     print(f"{len(top_glyphs)} top glyphs.")
     print(f"{len(bot_glyphs)} bot glyphs.")
     for to in possible_tos:
-        table = str.maketrans("ASDFZXV", ''.join(to))
+        table = str.maketrans("ASDFZXV", "".join(to))
         mapped = set(glyph.translate(table) for glyph in FOUND_BOT_GLYPHS)
         res = len(top_glyphs | mapped)
         if res < 100:
-            print(
-                f"{''.join(to)}: {res}."
-            )
+            print(f"{''.join(to)}: {res}.")
 
 
 def glyph_ordering(char):
