@@ -5,6 +5,7 @@ For finding patterns in text from the game Tunic
 import glob
 import itertools
 from collections import defaultdict
+from pprint import pprint
 
 import lark
 
@@ -15,11 +16,7 @@ HEADER: LITERAL
 line: (word | ("[" LITERAL "]"))+ _NEWLINE
 word: glyph ("/" glyph)*
 LITERAL: /[^]\n]+/
-glyph: ( GLYPH_TOP "-"? GLYPH_BOT )
-       | GLYPH_TOP -> top_glyph_only
-       | GLYPH_BOT -> bot_glyph_only
-GLYPH_TOP: /[1234QWER]+/
-GLYPH_BOT: /[ASDFZXCV]+/
+glyph: /[1234QWERASDFZXCV-]+/
 _NEWLINE: /\n/
 
 %import common.WS_INLINE
@@ -30,79 +27,49 @@ _NEWLINE: /\n/
 
 # These map all known or suspected glyphs/words to all locations where they have been seen.
 SCANNED_TREES: list[lark.Tree] = []
+FOUND_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
-FOUND_TOP_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
-FOUND_BOT_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 WORD_TRANSLATIONS: dict[str, str] = {
-    "134R-X/4WR-S": "<TAKE, GET>",
+    "134RX/4WRS": "<TAKE, GET>",
     "12": "<A>",
-    "234R-XV/W-ASDFZV": "<ITEM>",
-    "123QWR-DZX": "you",
-    "4R-AFX/3-AS/WR-AS": "<FOUND>",
-    "124R-SDFX/WR-AS": "guard",
-    "123WR-DV": "<OF>",
-    "12WR-ASX": "<THE>",
-    "34Q-DFZ/WR-X": "well",
-    "134QR-ASDFZX/WR-X/WR-AS": "<SHIELD/BLOCK>",
-    "34-DFXV": "it",
-    "123QWR-DZX/3WR-SXDF/3WR-SX": "uses",
-    "124QR-SDFZX/WR-X/WR-ASDF/3AS": "golden",
+    "234RXV/WASDFZV": "<ITEM>",
+    "123QWRDZX": "you",
+    "4RAFX/3AS/WRAS": "<FOUND>",
+    "124RSDFX/WRAS": "guard",
+    "123WRDV": "<OF>",
+    "12WRASX": "<THE>",
+    "34QDFZ/WRX": "well",
+    "134QRASDFZX/WRX/WRAS": "<SHIELD/BLOCK>",
+    "34DFXV": "it",
+    "123QWRDZX/3WRSXDF/3WRSX": "uses",
+    "124QRSDFZX/WRX/WRASDF/3AS": "golden",
+    "124RSX/3AS": "gun",
 }
 SOUND_TRANSLATIONS: dict[str, str] = {
-    "3WR-SX": "z",
+    "3WRSX": "z",
     # maybe "f", blowing-sound, from library picture? but we also have it in "guardhouse"
-    "WR-SFX": "how",
+    "WRSFX": "how",
     # From "well well well" fox at well
-    "34Q-DFZ": "weh",
-    "WR-X": "ll",
-    "QWR-SDFZ": "beh",
+    # also from "bell"
+    # "34QDFZ": "weh",
+    "34Q": "w",
     "DFZ": "eh",
-    "34-DFXV": "it",
+    "WRX": "ll",
+    "QWRSDFZ": "beh",
+    # "34DFXV": "it",
     "DF": "ə",
-    "12": "ah",
-    "WR-AS": "d",
+    "12": "ay",
+    "WRAS": "d",
+    "123QWRDZX": "you",
+    # suspected from "guard" and "gun"
+    "124RSX": "g",
+    "3AS": "n",  # reinforced from <FOUND>
+    # speculation from "shield"
+    "134QRASDFZX": "she",
 }
 SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
-    frozenset(g.split("")): s for g, s in SOUND_TRANSLATIONS.items()
+    frozenset(g): s for g, s in SOUND_TRANSLATIONS.items()
 }
-
-
-def mirroring_unify():
-    """
-    Hypothesis under test:
-    Glyph-parts above and below the separator represent the same thing transformed in some way.
-    Test by:
-    unifying into a single representation.
-    Result:
-    No single mapping seems to work;
-    any one pattern unifies very few.
-    """
-    # none of these manual ones worked
-    # so let's try all possiblities
-    possible_tos = list(itertools.permutations("1234QWR"))
-    # for to in
-    # [
-    # # simple vertical
-    # # shift
-    # '1234QWR',
-    # # mirror on the
-    # # center
-    # '3412QWR',
-    # # mirror diamond
-    # # left-right
-    # '2143QWR',
-    # # double mirror
-    # '4321QWR' ]
-    top_glyphs = set(FOUND_TOP_GLYPHS.keys())
-    bot_glyphs = set(FOUND_BOT_GLYPHS.keys())
-    print(f"{len(top_glyphs)} top glyphs.")
-    print(f"{len(bot_glyphs)} bot glyphs.")
-    for to in possible_tos:
-        table = str.maketrans("ASDFZXV", "".join(to))
-        mapped = set(glyph.translate(table) for glyph in FOUND_BOT_GLYPHS)
-        res = len(top_glyphs | mapped)
-        if res < 100:
-            print(f"{''.join(to)}: {res}.")
 
 
 def glyph_ordering(char):
@@ -117,7 +84,10 @@ def clean_glyph(glyph: str) -> str:
     of the following glyph.
     """
     return "".join(
-        sorted(set(glyph.replace("E", "").replace("C", "")), key=glyph_ordering)
+        sorted(
+            set(glyph.replace("E", "").replace("C", "").replace("-", "")),
+            key=glyph_ordering,
+        )
     )
 
 
@@ -126,18 +96,13 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
 
     def glyph(self, tree):  # pylint:disable=invalid-name
         """Standardize glyphs by deduplicating and sorting them."""
-        resolved = [clean_glyph(token.value) for token in tree.children]
+        assert len(tree.children) == 1
+        resolved = clean_glyph(tree.children[0].value)
         return resolved
-
-    def top_glyph_only(self, tree):
-        return [clean_glyph(tree.children[0]), ""]
-
-    def bot_glyph_only(self, tree):
-        return ["", clean_glyph(tree.children[0])]
 
     def word(self, tree):
         """Print representation of whole word"""
-        tree.this_word = "/".join(["-".join(glyph) for glyph in tree.children])
+        tree.this_word = "/".join(tree.children)
         return tree
 
     def section(self, tree):
@@ -160,8 +125,7 @@ class TunicNotes(lark.Visitor):
     def word(self, tree):
         """Log all glyphs from this word in FOUND_GLYPHS"""
         for glyph in tree.children:
-            FOUND_TOP_GLYPHS[glyph[0]].add(tree.this_word)
-            FOUND_BOT_GLYPHS[glyph[1]].add(tree.this_word)
+            FOUND_GLYPHS[glyph].add(tree.this_word)
 
     def line(self, tree):
         """Log all words from this line in FOUND_WORDS"""
@@ -241,6 +205,54 @@ def _render_glyph(glyph: str) -> list[str]:
     return representation
 
 
+def process_text(text: str):
+    output_a = []
+    output_b = []
+    for word in text.split(" "):
+        output_a.append(WORD_TRANSLATIONS.get(word, word))
+        for glyph in word.split("/"):
+            by_sound: list = []
+            if glyph in SOUND_TRANSLATIONS:
+                by_sound.append(SOUND_TRANSLATIONS[glyph])
+            else:
+                # let's try subglyph representations
+                glyph_parts = frozenset(glyph)
+                # what identified subglyphs fit here?
+                possible_components = [
+                    rep for rep in SUBGLYPH_SOUNDS if rep < glyph_parts
+                ]
+                if possible_components:
+                    # try a low-effort solution first: permutations
+                    options: set[str] = set()
+                    for sequence in itertools.permutations(possible_components):
+                        # remove subglyphs until nothing remaining fits
+                        sounds = []
+                        _g = glyph_parts.copy()
+                        for subglyph in sequence:
+                            if subglyph <= _g:
+                                _g = _g - subglyph
+                                sounds.append(SUBGLYPH_SOUNDS[subglyph])
+                                if not _g:
+                                    # nothing left to extract
+                                    break
+                        else:  # no break
+                            # we ran out of things to try with some glyph remaining
+                            # include what's left in the return
+                            sounds.append(clean_glyph("".join(_g)))
+                        # string the sounds together
+                        options.add("_".join(sounds))
+                    by_sound.append(options)
+                else:
+                    # found nothing, just leave an unidentified glyph
+                    by_sound.append(glyph)
+            output_b.append(by_sound)
+
+    print(text)
+    render_text(text)
+    print(output_a)
+    pprint(output_b)
+
+
 def _main():
     lrk = init_lark()
     visitor = TunicNotes()
@@ -253,3 +265,5 @@ def _main():
 
 if __name__ == "__main__":
     _main()
+    for WORD in WORD_TRANSLATIONS:
+        process_text(WORD)
