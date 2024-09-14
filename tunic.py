@@ -28,36 +28,42 @@ _NEWLINE: /\n/
 %ignore /(?<!.)\n/
 """
 
-# These map all detected glyphs and words to all locations where they have been seen.
+# These map all known or suspected glyphs/words to all locations where they have been seen.
 SCANNED_TREES: list[lark.Tree] = []
 FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_TOP_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_BOT_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
-GLYPH_TRANSLATIONS: dict[str, str] = {
-    "134-RX/4WRS": "<TAKE, GET>",
-    "234-RXV/WASDFZV": "<ITEM>",
+WORD_TRANSLATIONS: dict[str, str] = {
+    "134R-X/4WR-S": "<TAKE, GET>",
+    "12": "<A>",
+    "234R-XV/W-ASDFZV": "<ITEM>",
     "123QWR-DZX": "you",
-    "3WR-SX": "z",
-    "12-": "<A>",
     "4R-AFX/3-AS/WR-AS": "<FOUND>",
     "124R-SDFX/WR-AS": "guard",
-    "WRSFX": "f",  # maybe? from library picture
-    "WR-SFX": "how",
     "123WR-DV": "<OF>",
     "12WR-ASX": "<THE>",
+    "34Q-DFZ/WR-X": "well",
+    "134QR-ASDFZX/WR-X/WR-AS": "<SHIELD/BLOCK>",
+    "34-DFXV": "it",
+    "123QWR-DZX/3WR-SXDF/3WR-SX": "uses",
+    "124QR-SDFZX/WR-X/WR-ASDF/3AS": "golden",
+}
+SOUND_TRANSLATIONS: dict[str, str] = {
+    "3WR-SX": "z",
+    # maybe "f", blowing-sound, from library picture? but we also have it in "guardhouse"
+    "WR-SFX": "how",
     # From "well well well" fox at well
     "34Q-DFZ": "weh",
     "WR-X": "ll",
     "QWR-SDFZ": "beh",
     "DFZ": "eh",
-    "134QR-ASDFZX/WR-X/WRAS": "<SHIELD/BLOCK>",
     "34-DFXV": "it",
-    "123QWR-DZX/3WR-SXDF/3WR-SX": "uses",
-    # thus...
     "DF": "ə",
     "12": "ah",
     "WR-AS": "d",
-    "124QR-SDFZX/WR-X/WR-ASDF/3AS": "golden",
+}
+SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
+    frozenset(g.split("")): s for g, s in SOUND_TRANSLATIONS.items()
 }
 
 
