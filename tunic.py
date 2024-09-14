@@ -27,6 +27,7 @@ _NEWLINE: /\n/
 
 # These map all known or suspected glyphs/words to all locations where they have been seen.
 SCANNED_TREES: list[lark.Tree] = []
+SOURCE_TEXTS: list[tuple[str, str]] = []
 FOUND_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
 WORD_TRANSLATIONS: dict[str, str] = {
@@ -114,9 +115,9 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
         """A block of text, possibly across multiple text boxes"""
         assert tree.children[0].type == "HEADER"
         section_name = tree.children[0].value
-        subsections = []
-        text = []
-        words = []
+        subsections: list[dict] = []
+        text: list[str] = []
+        words: list[str] = []
         for word in tree.children[1:]:
             if isinstance(word, lark.Token) and word.type == "LITERAL":
                 # literals
@@ -130,6 +131,7 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
         whole_line = " ".join(text)
         for word in words:
             FOUND_WORDS[word].add(whole_line)
+        SOURCE_TEXTS.append((section_name, whole_line))
         return {"header": section_name, "subsections": subsections, "text": text}
 
     def start(self, tree):
@@ -157,14 +159,15 @@ def points_of_interest(search_space: dict[str, set], n: int):
     return {k: v for (k, v) in search_space.items() if len(v) >= n}
 
 
-def render_text(word: str):
+def render_text(text: str):
     """Convert dense representation to text art"""
-    representation = [""] * 12
-    for glyph in word.split("/"):
-        for i, new in enumerate(_render_glyph(glyph)):
-            representation[i] = representation[i] + new
-    for line in representation:
-        print(line)
+    for word in text.split(" "):
+        representation = [""] * 12
+        for glyph in word.split("/"):
+            for i, new in enumerate(_render_glyph(glyph)):
+                representation[i] = representation[i] + new
+        for line in representation:
+            print(line)
 
 
 def _render_glyph(glyph: str) -> list[str]:
@@ -256,12 +259,13 @@ def _main():
     lrk = init_lark()
     for fname in glob.iglob("./notes/*.txt"):
         print(fname)
-        tree = load_file(fname, lrk)
+        _tree = load_file(fname, lrk)
         # print(tree.pretty())
 
 
 if __name__ == "__main__":
     _main()
-    for WORD in FOUND_WORDS:
-        process_text(WORD)
+    for HEADER, TEXT in SOURCE_TEXTS:
+        print(HEADER)
+        process_text(TEXT)
         input("press enter to continue")
