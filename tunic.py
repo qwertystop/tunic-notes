@@ -160,14 +160,27 @@ def points_of_interest(search_space: dict[str, set], n: int):
 
 
 def render_text(text: str):
-    """Convert dense representation to text art"""
+    """Convert dense representation to printable text"""
+    spacing = 3
+    max_length = 80
+    text_rep = [""] * 12
+
+    def _flush():
+        nonlocal text_rep
+        for line in text_rep:
+            print(line)
+        text_rep = [""] * 12
+
     for word in text.split(" "):
-        representation = [""] * 12
+        word_rep = [""] * 12
         for glyph in word.split("/"):
             for i, new in enumerate(_render_glyph(glyph)):
-                representation[i] = representation[i] + new
-        for line in representation:
-            print(line)
+                word_rep[i] = word_rep[i] + new
+        if (len(text_rep[0]) + len(word_rep[0]) + spacing) > max_length:
+            _flush()
+        for i, new in enumerate(word_rep):
+            text_rep[i] = text_rep[i] + (" " * spacing) + new
+    _flush()
 
 
 def _render_glyph(glyph: str) -> list[str]:
