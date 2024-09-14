@@ -11,9 +11,9 @@ import lark
 
 GRAMMAR = r"""
 start: section
-section: "#" HEADER _NEWLINE (section+ | line+)
+section: "#" HEADER _NEWLINE (section+ | _line+)
 HEADER: LITERAL
-line: (word | ("[" LITERAL "]"))+ _NEWLINE
+_line: (word | ("[" LITERAL "]"))+ _NEWLINE
 word: glyph ("/" glyph)*
 LITERAL: /[^]\n]+/
 glyph: /[1234QWERASDFZXCV-]+/
@@ -105,39 +105,35 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
 
     def word(self, tree):
         """Print representation of whole word"""
-        tree.this_word = "/".join(tree.children)
-        return tree
+        this_word = "/".join(tree.children)
+        for glyph in tree.children:
+            FOUND_GLYPHS[glyph].add(this_word)
+        return this_word
 
     def section(self, tree):
-        """Forward section name down to children"""
+        """A block of text, possibly across multiple text boxes"""
         assert tree.children[0].type == "HEADER"
         section_name = tree.children[0].value
-        for i, child in enumerate(tree.children):
-            if isinstance(child, lark.Tree):
-                assert not hasattr(child, "in_section")
-                child.in_section = section_name
-                if child.data == "line":
-                    assert not hasattr(child, "line_number")
-                    child.line_number = i
-        return tree
+        subsections = []
+        text = []
+        words = []
+        for word in tree.children[1:]:
+            if isinstance(word, lark.Token) and word.type == "LITERAL":
+                # literals
+                text.append(word.value)
+            elif isinstance(word, dict):
+                # subsection
+                subsections.append(word)
+            else:
+                words.append(word)
+                text.append(word)
+        whole_line = " ".join(text)
+        for word in words:
+            FOUND_WORDS[word].add(whole_line)
+        return {"header": section_name, "subsections": subsections, "text": text}
 
-
-class TunicNotes(lark.Visitor):
-    """Logs Tunic observations"""
-
-    def word(self, tree):
-        """Log all glyphs from this word in FOUND_GLYPHS"""
-        for glyph in tree.children:
-            FOUND_GLYPHS[glyph].add(tree.this_word)
-
-    def line(self, tree):
-        """Log all words from this line in FOUND_WORDS"""
-        for word in tree.children:
-            # skip literals
-            if isinstance(word, lark.Tree):
-                FOUND_WORDS[word.this_word].add(
-                    f"{tree.in_section}, line {tree.line_number}"
-                )
+    def start(self, tree):
+        return tree.children
 
 
 def init_lark():
@@ -258,11 +254,9 @@ def process_text(text: str):
 
 def _main():
     lrk = init_lark()
-    visitor = TunicNotes()
     for fname in glob.iglob("./notes/*.txt"):
         print(fname)
         tree = load_file(fname, lrk)
-        visitor.visit(tree)
         # print(tree.pretty())
 
 
