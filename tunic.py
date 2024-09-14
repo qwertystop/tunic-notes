@@ -44,6 +44,7 @@ WORD_TRANSLATIONS: dict[str, str] = {
     "123QWRDZX/3WRSXDF/3WRSX": "uses",
     "124QRSDFZX/WRX/WRASDF/3AS": "golden",
     "124RSX/3AS": "gun",
+    "QWRSDFZ/WRX": "bell",
 }
 SOUND_TRANSLATIONS: dict[str, str] = {
     "3WRSX": "z",
@@ -55,7 +56,7 @@ SOUND_TRANSLATIONS: dict[str, str] = {
     "34Q": "w",
     "DFZ": "eh",
     "WRX": "ll",
-    "QWRSDFZ": "beh",
+    "QWRS": "b",
     # "34DFXV": "it",
     "DF": "ə",
     "12": "ay",
@@ -66,6 +67,8 @@ SOUND_TRANSLATIONS: dict[str, str] = {
     "3AS": "n",  # reinforced from <FOUND>
     # speculation from "shield"
     "134QRASDFZX": "she",
+    # speculation from "golden"
+    "QDFZ": "oh",
 }
 SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
     frozenset(g): s for g, s in SOUND_TRANSLATIONS.items()
@@ -265,5 +268,6 @@ def _main():
 
 if __name__ == "__main__":
     _main()
-    for WORD in WORD_TRANSLATIONS:
+    for WORD in FOUND_WORDS:
         process_text(WORD)
+        input("press enter to continue")
