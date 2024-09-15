@@ -47,33 +47,119 @@ WORD_TRANSLATIONS: dict[str, str] = {
     "124RSX/3AS": "gun",
     "QWRSDFZ/WRX": "bell",
 }
-SOUND_TRANSLATIONS: dict[str, str] = {
-    "3WRSX": "z",
-    # maybe "f", blowing-sound, from library picture? but we also have it in "guardhouse"
-    "WRSFX": "how",
-    # From "well well well" fox at well
-    # also from "bell"
-    # "34QDFZ": "weh",
-    "34Q": "w",
-    "DFZ": "eh",
-    "WRX": "ll",
-    "QWRS": "b",
-    # "34DFXV": "it",
-    "DF": "ə",
-    "12": "ay",
-    "WRAS": "d",
-    "123QWRDZX": "you",
-    # suspected from "guard" and "gun"
-    "124RSX": "g",
-    "3AS": "n",  # reinforced from <FOUND>
-    # speculation from "shield"
-    "134QRASDFZX": "she",
-    # speculation from "golden"
-    "QDFZ": "oh",
-}
-SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
-    frozenset(g): s for g, s in SOUND_TRANSLATIONS.items()
-}
+# Prior understanding overhauled by discovery of page 54,
+# which has what appears to be a syllabary?
+# Further, its structure implies that some of what we have been distinguishing
+# are not in fact significant (lengths of verticals are not noted there).
+# New glyph structure:
+# Length of vertical may not matter? Or it matters but page 54 doesn't show
+# that aspect very well, because why would any of this be easy.
+# Page 54 shows 18 different glyphs made exclusively of the outer hexagon,
+# and 24 glyphs made entirely of the inner lines.
+# None of these distinguish upper and lower parts of the left edge of the hex.
+# The length of the inner vertical varies (may or may not extend past upper or
+# lower branch points), but where there is no branch, length is unclear.
+# Further notes show glyphs made by compositing two of these (outer + inner).
+# None of them have the dot on the bottom that we've seen before. So that's
+# even more baffling.
+
+# Based on the above, glyph components are:
+# five segments of outer line (two points plus left edge)
+# four confidently-known segments of interior (branches)
+# possibly-ambiguous stem
+
+# new rep:
+# Outer part unchanged, except Q and Z are now the same.
+# Inner part, four branches plus stem. If any branches are present on either the
+# upward or downward side, the stem may either extend past the branch point to
+# the tip of the hex in that direction, or it may not. If there are no branches,
+# the chart present on page 54 does not provide clarity for whether the stem
+# stops at the branch-point or extends to the tip.
+# Old notation had:
+# Q: branch-to-tip, upward
+# R: center-to-branch, upward
+# X: Branch-to-tip, downward.
+# Center-to-branch downward does not appear in any strict (centerline-drawn)
+# glyphs.
+
+# At this point I am baffled, frustrated, and fed up. Since Zodi has finished
+# the game, it is unlikely I will return to this in the near future.
+
+
+def render_text(text: str):
+    """Convert dense representation to printable text"""
+    spacing = 3
+    max_length = 80
+    text_rep = [""] * 12
+
+    def _flush():
+        nonlocal text_rep
+        for line in text_rep:
+            print(line)
+        text_rep = [""] * 12
+
+    for word in text.split(" "):
+        if word[0] == "[":
+            # literal
+            word_rep = [" " * len(word)] * 12
+            word_rep[5] = word
+        else:
+            word_rep = [""] * 12
+            for glyph in word.split("/"):
+                for i, new in enumerate(_render_glyph(glyph)):
+                    word_rep[i] = word_rep[i] + new
+        if (len(text_rep[0]) + len(word_rep[0]) + spacing) > max_length:
+            _flush()
+        for i, new in enumerate(word_rep):
+            text_rep[i] = text_rep[i] + (" " * spacing) + new
+    _flush()
+
+
+def _render_glyph(glyph: str) -> list[str]:
+    r"""
+    Each glyph can be drawn as a 12x5 text cell:
+    [ /|\ ]
+    [/ | \]
+    [\ | /]
+    [|\|/ ]
+    [| |  ]
+    [-----]
+    [|    ]
+    [|/|\ ]
+    [/ | \]
+    [\ | /]
+    [ \|/ ]
+    [  °  ]
+
+    Original transcription method:
+    Upper diamond is 1234 (clockwise from top left)
+    Upper left vertical: Q
+    Upper inside vertical: W
+    Upper descender vertical: R
+    Lower diamond: ASDF (clockwise from top left)
+    Lower left vertical: Z
+    Lower inside vertical: X
+    Lower dot: V
+    """
+
+    def _f(x: str, out: str) -> str:  # pylint:disable=invalid-name
+        return out if x in glyph else " "
+
+    representation = [
+        "".join([" ", _f("1", "/"), _f("W", "|"), _f("2", "\\"), " "]),
+        "".join([_f("1", "/"), " ", _f("W", "|"), " ", _f("2", "\\")]),
+        "".join([_f("3", "\\"), " ", _f("W", "|"), " ", _f("4", "/")]),
+        "".join([_f("Q", "|"), _f("3", "\\"), _f("W", "|"), _f("4", "/"), " "]),
+        "".join([_f("Q", "|"), " ", _f("R", "|"), " ", " "]),
+        "-----",
+        "".join([_f("Z", "|"), " ", " ", " ", " "]),
+        "".join([_f("Z", "|"), _f("A", "/"), _f("X", "|"), _f("S", "\\"), " "]),
+        "".join([_f("A", "/"), " ", _f("X", "|"), " ", _f("S", "\\")]),
+        "".join([_f("D", "\\"), " ", _f("X", "|"), " ", _f("F", "/")]),
+        "".join([" ", _f("D", "\\"), _f("X", "|"), _f("F", "/"), " "]),
+        "".join([" ", " ", _f("V", "°"), " ", " "]),
+    ]
+    return representation
 
 
 def glyph_ordering(char):
@@ -157,72 +243,6 @@ def load_file(fname: str, lrk: lark.Lark) -> lark.Tree:
 def points_of_interest(search_space: dict[str, set], n: int):
     """Find the entries that appear more than n times"""
     return {k: v for (k, v) in search_space.items() if len(v) >= n}
-
-
-def render_text(text: str):
-    """Convert dense representation to printable text"""
-    spacing = 3
-    max_length = 80
-    text_rep = [""] * 12
-
-    def _flush():
-        nonlocal text_rep
-        for line in text_rep:
-            print(line)
-        text_rep = [""] * 12
-
-    for word in text.split(" "):
-        if word[0] == "[":
-            # literal
-            word_rep = [" " * len(word)] * 12
-            word_rep[5] = word
-        else:
-            word_rep = [""] * 12
-            for glyph in word.split("/"):
-                for i, new in enumerate(_render_glyph(glyph)):
-                    word_rep[i] = word_rep[i] + new
-        if (len(text_rep[0]) + len(word_rep[0]) + spacing) > max_length:
-            _flush()
-        for i, new in enumerate(word_rep):
-            text_rep[i] = text_rep[i] + (" " * spacing) + new
-    _flush()
-
-
-def _render_glyph(glyph: str) -> list[str]:
-    r"""
-    Each glyph can be drawn as a 12x5 text cell:
-    [ /|\ ]
-    [/ | \]
-    [\ | /]
-    [|\|/ ]
-    [| |  ]
-    [-----]
-    [|    ]
-    [|/|\ ]
-    [/ | \]
-    [\ | /]
-    [ \|/ ]
-    [  °  ]
-    """
-
-    def _f(x: str, out: str) -> str:  # pylint:disable=invalid-name
-        return out if x in glyph else " "
-
-    representation = [
-        "".join([" ", _f("1", "/"), _f("W", "|"), _f("2", "\\"), " "]),
-        "".join([_f("1", "/"), " ", _f("W", "|"), " ", _f("2", "\\")]),
-        "".join([_f("3", "\\"), " ", _f("W", "|"), " ", _f("4", "/")]),
-        "".join([_f("Q", "|"), _f("3", "\\"), _f("W", "|"), _f("4", "/"), " "]),
-        "".join([_f("Q", "|"), " ", _f("R", "|"), " ", " "]),
-        "-----",
-        "".join([_f("Z", "|"), " ", " ", " ", " "]),
-        "".join([_f("Z", "|"), _f("A", "/"), _f("X", "|"), _f("S", "\\"), " "]),
-        "".join([_f("A", "/"), " ", _f("X", "|"), " ", _f("S", "\\")]),
-        "".join([_f("D", "\\"), " ", _f("X", "|"), " ", _f("F", "/")]),
-        "".join([" ", _f("D", "\\"), _f("X", "|"), _f("F", "/"), " "]),
-        "".join([" ", " ", _f("V", "°"), " ", " "]),
-    ]
-    return representation
 
 
 def process_text(text: str):

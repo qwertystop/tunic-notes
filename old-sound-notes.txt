@@ -1,0 +1,27 @@
+ SOUND_TRANSLATIONS: dict[str, str] = {
+     "3WRSX": "z",
+     # maybe "f", blowing-sound, from library picture? but we also have it in "guardhouse"
+     "WRSFX": "how",
+     # From "well well well" fox at well
+     # also from "bell"
+     # "34QDFZ": "weh",
+     "34Q": "w",
+     "DFZ": "eh",
+     "WRX": "ll",
+     "QWRS": "b",
+     # "34DFXV": "it",
+     "DF": "ə",
+     "12": "ay",
+     "WRAS": "d",
+     "123QWRDZX": "you",
+     # suspected from "guard" and "gun"
+     "124RSX": "g",
+     "3AS": "n",  # reinforced from <FOUND>
+     # speculation from "shield"
+     "134QRASDFZX": "she",
+     # speculation from "golden"
+     "QDFZ": "oh",
+ }
+ SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
+     frozenset(g): s for g, s in SOUND_TRANSLATIONS.items()
+ }
