@@ -121,7 +121,7 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
         for word in tree.children[1:]:
             if isinstance(word, lark.Token) and word.type == "LITERAL":
                 # literals
-                text.append(word.value)
+                text.append("[" + word.value + "]")
             elif isinstance(word, dict):
                 # subsection
                 subsections.append(word)
@@ -172,10 +172,15 @@ def render_text(text: str):
         text_rep = [""] * 12
 
     for word in text.split(" "):
-        word_rep = [""] * 12
-        for glyph in word.split("/"):
-            for i, new in enumerate(_render_glyph(glyph)):
-                word_rep[i] = word_rep[i] + new
+        if word[0] == "[":
+            # literal
+            word_rep = [" " * len(word)] * 12
+            word_rep[5] = word
+        else:
+            word_rep = [""] * 12
+            for glyph in word.split("/"):
+                for i, new in enumerate(_render_glyph(glyph)):
+                    word_rep[i] = word_rep[i] + new
         if (len(text_rep[0]) + len(word_rep[0]) + spacing) > max_length:
             _flush()
         for i, new in enumerate(word_rep):
@@ -224,6 +229,11 @@ def process_text(text: str):
     output_a = []
     output_b = []
     for word in text.split(" "):
+        if word[0] == "[":
+            # this is a literal, skip it
+            output_a.append(word)
+            output_b.append(word)
+            continue
         output_a.append(WORD_TRANSLATIONS.get(word, word))
         for glyph in word.split("/"):
             by_sound: list = []
@@ -280,5 +290,6 @@ if __name__ == "__main__":
     _main()
     for HEADER, TEXT in SOURCE_TEXTS:
         print(HEADER)
-        process_text(TEXT)
-        input("press enter to continue")
+        if TEXT:
+            process_text(TEXT)
+            input("press enter to continue")
