@@ -286,10 +286,23 @@ def _main():
         # print(tree.pretty())
 
 
+def interactive():
+    def known_texts():
+        for header, text in SOURCE_TEXTS:
+            if text:
+                yield (header, text)
+
+    ts = itertools.cycle(known_texts())
+    while True:
+        i = input("Input text, or leave blank for next known line: ")
+        if i:
+            process_text(i)
+        else:
+            header, text = next(ts)
+            print(header)
+            process_text(text)
+
+
 if __name__ == "__main__":
     _main()
-    for HEADER, TEXT in SOURCE_TEXTS:
-        print(HEADER)
-        if TEXT:
-            process_text(TEXT)
-            input("press enter to continue")
+    interactive()
