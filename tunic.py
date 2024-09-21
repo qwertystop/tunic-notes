@@ -30,6 +30,7 @@ _NEWLINE: /\n/
 SCANNED_TREES: list[lark.Tree] = []
 SOURCE_TEXTS: list[tuple[str, str]] = []
 FOUND_GLYPHS: defaultdict[str, set[str]] = defaultdict(set)
+FOUND_PARTS: defaultdict[str, set[str]] = defaultdict(set)
 FOUND_WORDS: defaultdict[str, set[str]] = defaultdict(set)
 WORD_TRANSLATIONS: dict[str, str] = {
     "134RX/4WRS": "<TAKE, GET>",
@@ -47,6 +48,34 @@ WORD_TRANSLATIONS: dict[str, str] = {
     "124QRSDFZX/WRX/WRASDF/3AS": "golden",
     "124RSX/3AS": "gun",
     "QWRSDFZ/WRX": "bell",
+}
+# These are likely inaccurate in details; derived from an understanding before page 54.
+SOUND_TRANSLATIONS: dict[str, str] = {
+    "3WRSX": "z",
+    # maybe "f", blowing-sound, from library picture? but we also have it in "guardhouse"
+    "WRSFX": "how",
+    # From "well well well" fox at well
+    # also from "bell"
+    # "34QDFZ": "weh",
+    "34Q": "w",
+    "DFZ": "eh",
+    "WRX": "ll",
+    "QWRS": "b",
+    # "34DFXV": "it",
+    "DF": "ə",
+    "12": "ay",
+    "WRAS": "d",
+    # suspected from "guard" and "gun"
+    # but "g" doesn't fit the inner-outer split
+    "124RSX": "g",
+    "3AS": "n",  # reinforced from <FOUND>
+    # speculation from "shield", doesn't fit inner-outer
+    "134QRASDFZX": "she",
+    # speculation from "golden"
+    "QDFZ": "oh",
+}
+SUBGLYPH_SOUNDS: dict[frozenset[str], str] = {
+    frozenset(g): s for g, s in SOUND_TRANSLATIONS.items()
 }
 # Prior understanding overhauled by discovery of page 54,
 # which has what appears to be a syllabary?
@@ -69,22 +98,23 @@ WORD_TRANSLATIONS: dict[str, str] = {
 # four confidently-known segments of interior (branches)
 # possibly-ambiguous stem
 
-# new rep:
-# Outer part unchanged, except Q and Z are now the same.
-# Inner part, four branches plus stem. If any branches are present on either the
-# upward or downward side, the stem may either extend past the branch point to
-# the tip of the hex in that direction, or it may not. If there are no branches,
-# the chart present on page 54 does not provide clarity for whether the stem
-# stops at the branch-point or extends to the tip.
-# Old notation had:
-# Q: branch-to-tip, upward
-# R: center-to-branch, upward
-# X: Branch-to-tip, downward.
-# Center-to-branch downward does not appear in any strict (centerline-drawn)
-# glyphs.
+# Returning to this. I think I got too caught up in the possible misunderstood
+# structure last time; there's still something here to work with: glyphs
+# separate into outer and inner parts. There's probably more going on than just
+# that, but even on its own that's something to work with.
+OUTER_PARTS = frozenset("12QDFZ")
+INNER_PARTS = frozenset("34WRASX")
+MYSTERY_DOT = frozenset("V")
 
-# At this point I am baffled, frustrated, and fed up. Since Zodi has finished
-# the game, it is unlikely I will return to this in the near future.
+
+def separate_glyph(glyph: str) -> tuple[str, str, str]:
+    """Split into inner and outer parts"""
+    g = set(glyph)
+    parts = (g & OUTER_PARTS, g & INNER_PARTS, g & MYSTERY_DOT)
+    result: tuple[str, str, str] = tuple(
+        "".join(sorted(p, key=glyph_ordering)) for p in parts
+    )
+    return result
 
 
 def render_text(text: str):
@@ -196,6 +226,9 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
         this_word = "/".join(tree.children)
         for glyph in tree.children:
             FOUND_GLYPHS[glyph].add(this_word)
+            parts = separate_glyph(glyph)
+            for part in parts:
+                FOUND_PARTS[part].add(this_word)
         return this_word
 
     def section(self, tree):
