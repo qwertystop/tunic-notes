@@ -9,6 +9,7 @@ from pprint import pprint
 
 import lark
 
+# pylint:disable=invalid-name
 GRAMMAR = r"""
 start: section
 section: "#" HEADER _NEWLINE (section+ | _line+)
@@ -142,7 +143,7 @@ def _render_glyph(glyph: str) -> list[str]:
     Lower dot: V
     """
 
-    def _f(x: str, out: str) -> str:  # pylint:disable=invalid-name
+    def _f(x: str, out: str) -> str:
         return out if x in glyph else " "
 
     representation = [
@@ -184,7 +185,7 @@ def clean_glyph(glyph: str) -> str:
 class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
     """Clean glyphs"""
 
-    def glyph(self, tree):  # pylint:disable=invalid-name
+    def glyph(self, tree):
         """Standardize glyphs by deduplicating and sorting them."""
         assert len(tree.children) == 1
         resolved = clean_glyph(tree.children[0].value)
@@ -220,7 +221,7 @@ class CleanAndAnnotate(lark.visitors.Transformer_InPlace):
         SOURCE_TEXTS.append((section_name, whole_line))
         return {"header": section_name, "subsections": subsections, "text": text}
 
-    def start(self, tree):
+    def start(self, tree):  # pylint:disable=missing-function-docstring
         return tree.children
 
 
@@ -246,6 +247,10 @@ def points_of_interest(search_space: dict[str, set], n: int):
 
 
 def process_text(text: str):
+    """
+    Pump a block of text through as many different processors
+    as we've got, and present it to the user in hopes of insight.
+    """
     output_a = []
     output_b = []
     for word in text.split(" "):
@@ -307,6 +312,10 @@ def _main():
 
 
 def interactive():
+    """
+    Set up an interactive interface for processing in search of insight
+    """
+
     def known_texts():
         for header, text in SOURCE_TEXTS:
             if text:
